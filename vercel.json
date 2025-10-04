@@ -37,9 +37,6 @@
         }
     ],
     "env": {
-        "DATABASE_URL": "@database-url",
-        "JWT_SECRET": "@jwt-secret",
-        "EMAIL_API_KEY": "@email-api-key",
         "NODE_ENV": "production"
     }
 }
