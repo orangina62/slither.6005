@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <title>Slither.io - Personnalisation</title>
+    <link rel="stylesheet" href="css/customization.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <div class="customization-container">
+        <header>
+            <h1>🎨 Personnalise ton Serpent</h1>
+            <div class="user-info">
+                <span id="username"></span>
+                <button id="logout" class="btn-logout">Déconnexion</button>
+            </div>
+        </header>
+
+        <div class="customization-content">
+            <div class="preview-section">
+                <canvas id="snake-preview" width="400" height="300"></canvas>
+                <h3>Aperçu</h3>
+            </div>
+
+            <div class="options-section">
+                <!-- Sélection du corps -->
+                <div class="option-group">
+                    <h3>Corps du serpent</h3>
+                    <div class="texture-grid" id="body-textures">
+                        <!-- Généré dynamiquement via JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Sélection des couleurs -->
+                <div class="option-group">
+                    <h3>Couleurs</h3>
+                    <div class="color-picker">
+                        <label>Couleur primaire:</label>
+                        <input type="color" id="primary-color" value="#FF0000">
+                    </div>
+                    <div class="color-picker">
+                        <label>Couleur secondaire:</label>
+                        <input type="color" id="secondary-color" value="#AA0000">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button id="save-customization" class="btn-secondary">Sauvegarder</button>
+            <button id="play-button" class="btn-primary">🎮 Jouer</button>
+        </div>
+    </div>
+
+    <script src="js/customization.js"></script>
+</body>
+</html>

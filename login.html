@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <title>Slither.io - Connexion</title>
+    <link rel="stylesheet" href="css/login.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-form">
+            <h1>🐍 Slither.io</h1>
+            
+            <!-- Formulaire de connexion -->
+            <div id="login-form">
+                <h2>Connexion</h2>
+                <form id="loginForm">
+                    <div class="input-group">
+                        <input type="text" id="username" placeholder="Nom d'utilisateur" required>
+                    </div>
+                    <div class="input-group">
+                        <input type="password" id="password" placeholder="Mot de passe" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Se connecter</button>
+                </form>
+                <p class="switch-form">Pas encore de compte ? <a href="#" id="showRegister">S'inscrire</a></p>
+            </div>
+
+            <!-- Formulaire d'inscription -->
+            <div id="register-form" style="display: none;">
+                <h2>Inscription</h2>
+                <form id="registerForm">
+                    <div class="input-group">
+                        <input type="text" id="regUsername" placeholder="Nom d'utilisateur" required minlength="3" maxlength="20">
+                    </div>
+                    <div class="input-group">
+                        <input type="email" id="regEmail" placeholder="Adresse email" required>
+                    </div>
+                    <div class="input-group">
+                        <input type="password" id="regPassword" placeholder="Mot de passe" required minlength="6">
+                    </div>
+                    <div class="input-group">
+                        <input type="password" id="regConfirmPassword" placeholder="Confirmer le mot de passe" required>
+                    </div>
+                    <button type="submit" class="btn-primary">S'inscrire</button>
+                </form>
+                <p class="switch-form">Déjà un compte ? <a href="#" id="showLogin">Se connecter</a></p>
+            </div>
+
+            <!-- Messages -->
+            <div id="message-container" class="message" style="display: none;"></div>
+        </div>
+    </div>
+    <script src="js/auth.js"></script>
+</body>
+</html>

@@ -8,7 +8,8 @@ Ce guide détaille l'implémentation des fonctionnalités suivantes pour transfo
 2. **Limites de carte dynamiques** - Bordures mortelles adaptées au nombre de joueurs
 3. **Système d'authentification** - Connexion utilisateur avec base de données SQL
 4. **Menu de customisation** - Personnalisation de l'apparence du serpent
-5. **Multijoueur en temps réel** - Architecture WebSocket hébergée sur Vercel
+5. **Écran de mort amélioré** - Affichage du score et de la taille en mètres (1 score = 0.01m)
+6. **Multijoueur en temps réel** - Architecture WebSocket hébergée sur Vercel
 
 ---
 
@@ -48,16 +49,19 @@ slither-multiplayer/
 │   ├── index.html
 │   ├── login.html             # NOUVEAU
 │   ├── customization.html     # NOUVEAU
+│   ├── game-over.html         # NOUVEAU
 │   ├── css/
 │   │   ├── style.css          # Modifié
 │   │   ├── login.css          # NOUVEAU
-│   │   └── customization.css  # NOUVEAU
+│   │   ├── customization.css  # NOUVEAU
+│   │   └── game-over.css      # NOUVEAU
 │   ├── js/
 │   │   ├── game.js            # Fortement modifié
 │   │   ├── snake.js           # Modifié
 │   │   ├── food.js            # Légèrement modifié
 │   │   ├── auth.js            # NOUVEAU
 │   │   ├── customization.js   # NOUVEAU
+│   │   ├── game-over.js       # NOUVEAU
 │   │   └── socket-client.js   # NOUVEAU
 │   └── images/                # Existant + nouvelles options
 ├── server/                     # NOUVEAU - Backend complet
@@ -672,6 +676,777 @@ new CustomizationManager();
 
 ---
 
+## 💀 Écran de Mort Amélioré
+
+### 1. Page Game Over (`game-over.html`)
+
+```html
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <title>Slither.io - Game Over</title>
+    <link rel="stylesheet" href="css/game-over.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <div class="game-over-overlay">
+        <div class="game-over-container">
+            <div class="death-animation">
+                <div class="explosion-effect"></div>
+            </div>
+            
+            <div class="game-over-content">
+                <h1 class="game-over-title">Game Over!</h1>
+                
+                <div class="stats-container">
+                    <div class="main-stats">
+                        <div class="stat-item score-display">
+                            <div class="stat-label">Score Final</div>
+                            <div class="stat-value" id="final-score">0</div>
+                        </div>
+                        
+                        <div class="stat-item length-display">
+                            <div class="stat-label">Taille Atteinte</div>
+                            <div class="stat-value" id="final-length">0.00 m</div>
+                        </div>
+                    </div>
+                    
+                    <div class="secondary-stats">
+                        <div class="stat-row">
+                            <span class="stat-name">Temps de survie:</span>
+                            <span class="stat-data" id="survival-time">00:00</span>
+                        </div>
+                        
+                        <div class="stat-row">
+                            <span class="stat-name">Nourriture consommée:</span>
+                            <span class="stat-data" id="food-eaten">0</span>
+                        </div>
+                        
+                        <div class="stat-row">
+                            <span class="stat-name">Joueurs éliminés:</span>
+                            <span class="stat-data" id="kills-count">0</span>
+                        </div>
+                        
+                        <div class="stat-row">
+                            <span class="stat-name">Classement final:</span>
+                            <span class="stat-data" id="final-rank">#0</span>
+                        </div>
+                        
+                        <div class="stat-row best-score" id="best-score-row" style="display: none;">
+                            <span class="stat-name">🏆 Nouveau record personnel!</span>
+                            <span class="stat-data">Ancien: <span id="previous-best">0</span></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="progress-bar-container">
+                    <div class="progress-label">Progression vers le classement</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="rank-progress"></div>
+                    </div>
+                    <div class="progress-text">
+                        <span id="current-rank-text">Rang actuel</span>
+                        <span id="next-rank-text">Rang suivant</span>
+                    </div>
+                </div>
+                
+                <div class="death-info">
+                    <div class="death-cause" id="death-cause">
+                        Cause de la mort: Collision avec un autre serpent
+                    </div>
+                    <div class="killer-info" id="killer-info" style="display: none;">
+                        Éliminé par: <span class="killer-name"></span>
+                    </div>
+                </div>
+                
+                <div class="action-buttons">
+                    <button id="play-again-btn" class="primary-btn">
+                        <span class="btn-icon">🔄</span>
+                        Rejouer
+                    </button>
+                    <button id="customize-btn" class="secondary-btn">
+                        <span class="btn-icon">🎨</span>
+                        Personnaliser
+                    </button>
+                    <button id="leaderboard-btn" class="secondary-btn">
+                        <span class="btn-icon">🏆</span>
+                        Classement
+                    </button>
+                    <button id="menu-btn" class="tertiary-btn">
+                        <span class="btn-icon">🏠</span>
+                        Menu Principal
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/game-over.js"></script>
+</body>
+</html>
+```
+
+### 2. Styles Game Over (`css/game-over.css`)
+
+```css
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    overflow: hidden;
+    height: 100vh;
+}
+
+.game-over-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.game-over-container {
+    background: linear-gradient(145deg, #2a2a3a 0%, #1e1e2e 100%);
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    border: 2px solid #444;
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideUp 0.6s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(100px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.death-animation {
+    text-align: center;
+    margin-bottom: 20px;
+    position: relative;
+    height: 60px;
+}
+
+.explosion-effect {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto;
+    background: radial-gradient(circle, #ff4444, #cc0000);
+    border-radius: 50%;
+    animation: explosion 1s ease-out;
+}
+
+@keyframes explosion {
+    0% {
+        transform: scale(0);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.5);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 0.3;
+    }
+}
+
+.game-over-title {
+    text-align: center;
+    font-size: 3rem;
+    font-weight: bold;
+    color: #ff4444;
+    text-shadow: 0 0 20px rgba(255, 68, 68, 0.5);
+    margin-bottom: 30px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.stats-container {
+    margin-bottom: 30px;
+}
+
+.main-stats {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 25px;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    min-width: 150px;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: #aaa;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.stat-value {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.score-display .stat-value {
+    color: #ffd700;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.length-display .stat-value {
+    color: #00ff88;
+    text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+}
+
+.secondary-stats {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stat-row:last-child {
+    border-bottom: none;
+}
+
+.stat-name {
+    color: #ccc;
+    font-weight: 500;
+}
+
+.stat-data {
+    color: #fff;
+    font-weight: bold;
+}
+
+.best-score {
+    background: rgba(255, 215, 0, 0.1);
+    border-radius: 8px;
+    padding: 12px !important;
+    border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.best-score .stat-name {
+    color: #ffd700;
+    font-weight: bold;
+}
+
+.progress-bar-container {
+    margin: 20px 0;
+}
+
+.progress-label {
+    text-align: center;
+    color: #ccc;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #00ff88, #0099ff);
+    transition: width 1s ease-out;
+}
+
+.progress-text {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: #aaa;
+}
+
+.death-info {
+    background: rgba(255, 68, 68, 0.1);
+    border: 1px solid rgba(255, 68, 68, 0.3);
+    border-radius: 8px;
+    padding: 15px;
+    margin: 20px 0;
+    text-align: center;
+}
+
+.death-cause {
+    color: #ff6666;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.killer-info {
+    color: #ffaa66;
+    font-size: 0.9rem;
+}
+
+.killer-name {
+    color: #ff4444;
+    font-weight: bold;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.primary-btn, .secondary-btn, .tertiary-btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 120px;
+    justify-content: center;
+}
+
+.primary-btn {
+    background: linear-gradient(135deg, #00ff88, #00cc66);
+    color: #000;
+    box-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);
+}
+
+.primary-btn:hover {
+    background: linear-gradient(135deg, #00cc66, #00ff88);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 255, 136, 0.4);
+}
+
+.secondary-btn {
+    background: linear-gradient(135deg, #0099ff, #0077cc);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(0, 153, 255, 0.3);
+}
+
+.secondary-btn:hover {
+    background: linear-gradient(135deg, #0077cc, #0099ff);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 153, 255, 0.4);
+}
+
+.tertiary-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.tertiary-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.btn-icon {
+    font-size: 1.1rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .game-over-container {
+        padding: 20px;
+        margin: 20px;
+    }
+    
+    .main-stats {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .game-over-title {
+        font-size: 2rem;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+    }
+    
+    .primary-btn, .secondary-btn, .tertiary-btn {
+        width: 100%;
+    }
+}
+
+/* Animations de nombre (compteur) */
+.counting {
+    animation: countUp 2s ease-out;
+}
+
+@keyframes countUp {
+    from {
+        transform: scale(1.2);
+        color: #fff;
+    }
+    to {
+        transform: scale(1);
+    }
+}
+```
+
+### 3. Script Game Over (`js/game-over.js`)
+
+```javascript
+class GameOverManager {
+    constructor() {
+        this.gameData = this.getGameData();
+        this.userStats = this.getUserStats();
+        this.init();
+    }
+
+    init() {
+        this.displayGameOverStats();
+        this.setupEventListeners();
+        this.saveGameStats();
+        this.animateStats();
+    }
+
+    getGameData() {
+        // Récupérer les données de la partie depuis localStorage ou URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        return {
+            finalScore: parseInt(urlParams.get('score')) || 0,
+            survivalTime: parseInt(urlParams.get('time')) || 0,
+            foodEaten: parseInt(urlParams.get('food')) || 0,
+            kills: parseInt(urlParams.get('kills')) || 0,
+            finalRank: parseInt(urlParams.get('rank')) || 0,
+            totalPlayers: parseInt(urlParams.get('total')) || 0,
+            deathCause: urlParams.get('cause') || 'collision',
+            killerName: urlParams.get('killer') || null
+        };
+    }
+
+    getUserStats() {
+        // Récupérer les statistiques utilisateur depuis localStorage
+        const stats = localStorage.getItem('slither_user_stats');
+        if (stats) {
+            return JSON.parse(stats);
+        }
+        return {
+            bestScore: 0,
+            totalGames: 0,
+            totalKills: 0,
+            totalPlaytime: 0,
+            averageScore: 0
+        };
+    }
+
+    displayGameOverStats() {
+        // Calcul de la taille en mètres (1 score = 0.01m)
+        const lengthInMeters = (this.gameData.finalScore * 0.01).toFixed(2);
+        
+        // Affichage des statistiques principales
+        document.getElementById('final-score').textContent = this.formatNumber(this.gameData.finalScore);
+        document.getElementById('final-length').textContent = `${lengthInMeters} m`;
+        
+        // Formatage du temps de survie
+        const minutes = Math.floor(this.gameData.survivalTime / 60);
+        const seconds = this.gameData.survivalTime % 60;
+        document.getElementById('survival-time').textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        // Autres statistiques
+        document.getElementById('food-eaten').textContent = this.formatNumber(this.gameData.foodEaten);
+        document.getElementById('kills-count').textContent = this.gameData.kills;
+        document.getElementById('final-rank').textContent = `#${this.gameData.finalRank}/${this.gameData.totalPlayers}`;
+        
+        // Vérifier si c'est un nouveau record
+        if (this.gameData.finalScore > this.userStats.bestScore) {
+            this.showNewRecord();
+        }
+        
+        // Affichage de la cause de mort
+        this.displayDeathInfo();
+        
+        // Affichage de la progression vers le rang supérieur
+        this.displayRankProgress();
+    }
+
+    showNewRecord() {
+        const bestScoreRow = document.getElementById('best-score-row');
+        const previousBest = document.getElementById('previous-best');
+        
+        bestScoreRow.style.display = 'flex';
+        previousBest.textContent = this.formatNumber(this.userStats.bestScore);
+        
+        // Animation spéciale pour le nouveau record
+        setTimeout(() => {
+            bestScoreRow.classList.add('new-record-animation');
+        }, 1000);
+    }
+
+    displayDeathInfo() {
+        const deathCause = document.getElementById('death-cause');
+        const killerInfo = document.getElementById('killer-info');
+        
+        const causes = {
+            'collision': 'Collision avec un autre serpent',
+            'border': 'Sortie des limites de la carte',
+            'self': 'Collision avec votre propre corps',
+            'timeout': 'Temps de jeu écoulé'
+        };
+        
+        deathCause.textContent = `Cause de la mort: ${causes[this.gameData.deathCause] || 'Inconnu'}`;
+        
+        if (this.gameData.killerName && this.gameData.deathCause === 'collision') {
+            killerInfo.style.display = 'block';
+            killerInfo.querySelector('.killer-name').textContent = this.gameData.killerName;
+        }
+    }
+
+    displayRankProgress() {
+        const progressFill = document.getElementById('rank-progress');
+        const currentRankText = document.getElementById('current-rank-text');
+        const nextRankText = document.getElementById('next-rank-text');
+        
+        // Calcul du progrès basé sur le classement
+        const progressPercentage = Math.max(0, (this.gameData.totalPlayers - this.gameData.finalRank) / this.gameData.totalPlayers * 100);
+        
+        currentRankText.textContent = `#${this.gameData.finalRank}`;
+        nextRankText.textContent = this.gameData.finalRank > 1 ? `#${this.gameData.finalRank - 1}` : 'TOP 1';
+        
+        // Animation de la barre de progression
+        setTimeout(() => {
+            progressFill.style.width = `${progressPercentage}%`;
+        }, 500);
+    }
+
+    animateStats() {
+        // Animation des compteurs numériques
+        this.animateNumber('final-score', 0, this.gameData.finalScore, 2000);
+        
+        // Animation de la taille avec effet spécial
+        const lengthElement = document.getElementById('final-length');
+        const targetLength = this.gameData.finalScore * 0.01;
+        this.animateLength(lengthElement, 0, targetLength, 2000);
+        
+        // Animation des autres stats avec délai
+        setTimeout(() => {
+            this.animateNumber('food-eaten', 0, this.gameData.foodEaten, 1000);
+        }, 500);
+        
+        setTimeout(() => {
+            this.animateNumber('kills-count', 0, this.gameData.kills, 800);
+        }, 1000);
+    }
+
+    animateNumber(elementId, start, end, duration) {
+        const element = document.getElementById(elementId);
+        const startTime = Date.now();
+        
+        const updateNumber = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // Fonction d'easing pour une animation plus fluide
+            const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+            const current = Math.floor(start + (end - start) * easeOutQuart);
+            
+            element.textContent = this.formatNumber(current);
+            element.classList.add('counting');
+            
+            if (progress < 1) {
+                requestAnimationFrame(updateNumber);
+            } else {
+                element.classList.remove('counting');
+            }
+        };
+        
+        updateNumber();
+    }
+
+    animateLength(element, start, end, duration) {
+        const startTime = Date.now();
+        
+        const updateLength = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+            const current = start + (end - start) * easeOutQuart;
+            
+            element.textContent = `${current.toFixed(2)} m`;
+            element.classList.add('counting');
+            
+            if (progress < 1) {
+                requestAnimationFrame(updateLength);
+            } else {
+                element.classList.remove('counting');
+            }
+        };
+        
+        updateLength();
+    }
+
+    formatNumber(num) {
+        // Formatage des nombres avec séparateurs de milliers
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    }
+
+    setupEventListeners() {
+        document.getElementById('play-again-btn').addEventListener('click', () => {
+            this.playAgain();
+        });
+
+        document.getElementById('customize-btn').addEventListener('click', () => {
+            window.location.href = 'customization.html';
+        });
+
+        document.getElementById('leaderboard-btn').addEventListener('click', () => {
+            this.showLeaderboard();
+        });
+
+        document.getElementById('menu-btn').addEventListener('click', () => {
+            window.location.href = 'customization.html';
+        });
+
+        // Touche Espace ou Entrée pour rejouer rapidement
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'Enter') {
+                e.preventDefault();
+                this.playAgain();
+            }
+        });
+    }
+
+    async saveGameStats() {
+        // Sauvegarder les statistiques de la partie
+        this.userStats.totalGames++;
+        this.userStats.totalKills += this.gameData.kills;
+        this.userStats.totalPlaytime += this.gameData.survivalTime;
+        this.userStats.averageScore = ((this.userStats.averageScore * (this.userStats.totalGames - 1)) + this.gameData.finalScore) / this.userStats.totalGames;
+        
+        if (this.gameData.finalScore > this.userStats.bestScore) {
+            this.userStats.bestScore = this.gameData.finalScore;
+        }
+        
+        // Sauvegarder localement
+        localStorage.setItem('slither_user_stats', JSON.stringify(this.userStats));
+        
+        // Sauvegarder sur le serveur si connecté
+        const token = localStorage.getItem('slither_token');
+        if (token) {
+            try {
+                await fetch('/api/stats', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        score: this.gameData.finalScore,
+                        survivalTime: this.gameData.survivalTime,
+                        kills: this.gameData.kills,
+                        foodEaten: this.gameData.foodEaten
+                    })
+                });
+            } catch (error) {
+                console.error('Erreur lors de la sauvegarde des stats:', error);
+            }
+        }
+    }
+
+    playAgain() {
+        // Redirection vers le jeu avec animation de fermeture
+        const overlay = document.querySelector('.game-over-overlay');
+        overlay.style.animation = 'fadeOut 0.3s ease-out forwards';
+        
+        setTimeout(() => {
+            window.location.href = 'index.html';
+        }, 300);
+    }
+
+    showLeaderboard() {
+        // Afficher le classement (à implémenter selon vos besoins)
+        alert('Classement en cours de développement...');
+    }
+}
+
+// CSS pour l'animation de nouveau record
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes newRecord {
+        0%, 100% { transform: scale(1); }
+        25% { transform: scale(1.05); }
+        50% { transform: scale(1.1); }
+        75% { transform: scale(1.05); }
+    }
+    
+    .new-record-animation {
+        animation: newRecord 0.6s ease-in-out 3;
+        background: linear-gradient(90deg, rgba(255, 215, 0, 0.2), rgba(255, 215, 0, 0.1)) !important;
+    }
+    
+    @keyframes fadeOut {
+        from { opacity: 1; }
+        to { opacity: 0; }
+    }
+`;
+document.head.appendChild(style);
+
+// Initialiser le gestionnaire Game Over
+document.addEventListener('DOMContentLoaded', () => {
+    new GameOverManager();
+});
+```
+
+---
+
 ## 🎮 Système Multijoueur - Architecture WebSocket
 
 ### 1. Client WebSocket (`js/socket-client.js`)
@@ -811,8 +1586,19 @@ class GameClient {
 
     handlePlayerDeath(data) {
         if (data.playerId === this.playerId) {
-            // Le joueur est mort
-            this.showGameOver(data.finalScore);
+            // Le joueur est mort - préparer toutes les données pour l'écran de mort
+            const gameOverData = {
+                finalScore: Math.floor(data.finalScore),
+                survivalTime: data.survivalTime || Math.floor((Date.now() - this.gameStartTime) / 1000),
+                foodEaten: data.foodEaten || 0,
+                kills: data.kills || 0,
+                finalRank: data.finalRank || 0,
+                totalPlayers: this.players.size,
+                deathCause: data.deathCause || 'collision',
+                killerName: data.killerName || null
+            };
+            
+            this.showGameOver(gameOverData);
         } else {
             // Un autre joueur est mort, créer de la nourriture
             this.createFoodFromPlayer(data);
@@ -840,10 +1626,20 @@ class GameClient {
         }
     }
 
-    showGameOver(score) {
-        alert(`Game Over! Votre score: ${score}`);
-        // Rediriger vers le menu ou proposer de rejouer
-        window.location.href = 'customization.html';
+    showGameOver(gameOverData) {
+        // Rediriger vers l'écran de mort avec toutes les statistiques
+        const params = new URLSearchParams({
+            score: gameOverData.finalScore,
+            time: gameOverData.survivalTime || 0,
+            food: gameOverData.foodEaten || 0,
+            kills: gameOverData.kills || 0,
+            rank: gameOverData.finalRank || 0,
+            total: gameOverData.totalPlayers || 0,
+            cause: gameOverData.deathCause || 'collision',
+            killer: gameOverData.killerName || ''
+        });
+        
+        window.location.href = `game-over.html?${params.toString()}`;
     }
 
     createFoodFromPlayer(deathData) {
@@ -1505,6 +2301,14 @@ NODE_ENV=production
 3. **Connecter avec l'API de sauvegarde**
 4. **Créer les nouvelles textures/options**
 
+### Phase 3.5: Écran de Mort Amélioré (Mi-Semaine 4)
+
+1. **Créer l'interface game-over.html avec design moderne**
+2. **Implémenter le calcul taille en mètres (1 score = 0.01m)**
+3. **Ajouter les animations de compteurs et effets visuels**
+4. **Intégrer la sauvegarde des statistiques utilisateur**
+5. **Tester l'affichage des records et progressions**
+
 ### Phase 4: Multijoueur WebSocket (Semaines 5-6)
 
 1. **Configurer Socket.io serveur et client**
@@ -1577,6 +2381,8 @@ NODE_ENV=production
 
 - [ ] Authentification utilisateur fonctionnelle
 - [ ] Customisation sauvegardée et chargée
+- [ ] Écran de mort avec taille en mètres (1 score = 0.01m)
+- [ ] Animations et statistiques détaillées de fin de partie
 - [ ] Multijoueur en temps réel stable
 - [ ] Limites de carte adaptatives
 - [ ] Suppression complète des bots
@@ -1584,6 +2390,9 @@ NODE_ENV=production
 ### Tests de Qualité
 
 - [ ] 10+ joueurs simultanés sans lag
+- [ ] Écran de mort responsive et animations fluides
+- [ ] Calcul précis de la taille en mètres
+- [ ] Sauvegarde correcte des statistiques et records
 - [ ] Connexion/déconnexion gracieuse
 - [ ] Récupération après perte de connexion
 - [ ] Validation de tous les formulaires
