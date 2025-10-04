@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Over - Slither.io</title>
+    <link rel="stylesheet" href="css/game-over.css">
+</head>
+<body>
+    <div class="game-over-container">
+        <div class="game-over-header">
+            <h1 class="game-over-title">GAME OVER</h1>
+            <p class="game-over-subtitle">Partie terminée</p>
+        </div>
+
+        <div class="stats-container">
+            <!-- Score principal -->
+            <div class="main-stat">
+                <div class="stat-label">Score Final</div>
+                <div class="stat-value" id="finalScore">0</div>
+            </div>
+
+            <!-- Taille en mètres -->
+            <div class="main-stat highlight">
+                <div class="stat-label">Taille atteinte</div>
+                <div class="stat-value" id="finalSize">
+                    <span id="sizeMeters">0.00</span>
+                    <span class="unit">m</span>
+                </div>
+            </div>
+
+            <!-- Statistiques secondaires -->
+            <div class="secondary-stats">
+                <div class="stat-item">
+                    <div class="stat-icon">⏱️</div>
+                    <div class="stat-info">
+                        <div class="stat-label">Temps de survie</div>
+                        <div class="stat-value" id="survivalTime">0:00</div>
+                    </div>
+                </div>
+
+                <div class="stat-item">
+                    <div class="stat-icon">💀</div>
+                    <div class="stat-info">
+                        <div class="stat-label">Éliminations</div>
+                        <div class="stat-value" id="kills">0</div>
+                    </div>
+                </div>
+
+                <div class="stat-item">
+                    <div class="stat-icon">🏆</div>
+                    <div class="stat-info">
+                        <div class="stat-label">Classement</div>
+                        <div class="stat-value" id="ranking">-</div>
+                    </div>
+                </div>
+
+                <div class="stat-item">
+                    <div class="stat-icon">📏</div>
+                    <div class="stat-info">
+                        <div class="stat-label">Longueur max</div>
+                        <div class="stat-value" id="maxLength">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Meilleurs joueurs de la session -->
+        <div class="leaderboard-preview">
+            <h3>Top 5 de cette partie</h3>
+            <div id="topPlayers" class="top-players-list">
+                <!-- Sera rempli dynamiquement -->
+            </div>
+        </div>
+
+        <!-- Boutons d'action -->
+        <div class="action-buttons">
+            <button class="btn btn-primary" id="playAgainBtn">
+                <span class="btn-icon">🔄</span>
+                Rejouer
+                <span class="countdown" id="countdown">(5)</span>
+            </button>
+            <button class="btn btn-secondary" id="customizeBtn">
+                <span class="btn-icon">🎨</span>
+                Personnaliser
+            </button>
+            <button class="btn btn-secondary" id="statsBtn">
+                <span class="btn-icon">📊</span>
+                Mes Statistiques
+            </button>
+        </div>
+
+        <!-- Message personnel -->
+        <div class="personal-message" id="personalMessage">
+            <!-- Message dynamique basé sur la performance -->
+        </div>
+    </div>
+
+    <script src="js/game-over.js"></script>
+</body>
+</html>
